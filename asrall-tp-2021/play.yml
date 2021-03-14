@@ -1,0 +1,8 @@
+#!/usr/bin/env ansible-playbook
+- hosts: web
+  roles: 
+    - role: apache2
+    
+- hosts: loadbalancer
+  roles:
+    - role: nginx

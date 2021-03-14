@@ -1,0 +1,69 @@
+- name : apache installation
+  apt:
+    name: apache2
+
+- name: Installation de php
+  apt: 
+   name: php
+   update_cache: yes
+
+- name: add directory for sites
+  file:
+    state: directory
+    path: "/var/www/{{ item.nom_du_site }}"
+  loop: "{{ sites }}"
+
+- name: add index.html in sites
+  lineinfile:
+    state: present
+    create: yes
+    path: "/var/www/{{ item.nom_du_site }}/index.html"
+    line: "site de {{ item.nom_du_site }}"
+  loop: "{{ sites }}"
+
+- name: Notre page test PHP
+  template:
+    src: "test.php.j2"
+    dest: "/var/www/html/index.php"
+
+# version 3 de ansible 
+- name : supprime index.html         
+  ansible.builtin.file: 
+    path: "/var/www/html/index.html"
+    state: absent
+
+- name: deploy apache site files
+  template:
+    src: "site.j2"
+    dest: "/etc/apache2/sites-available/{{item.nom_du_site}}.conf"
+  loop: "{{ sites }}"
+
+- name: apache2 ativate VirtualHost
+  command: a2ensite {{ item.nom_du_site }}
+  loop: "{{ sites }}"
+
+- name: add listen
+  lineinfile:
+    path: /etc/apache2/ports.conf
+    line: "Listen {{ item.port }}"
+  loop: "{{ sites }}"
+  notify: restart apache2 
+
+- name: j'autoriste le port 22 (SSH) en entrée
+  ansible.builtin.iptables:
+    chain: INPUT
+    protocol: tcp
+    destination_port: 22
+    jump: ACCEPT
+
+- name: j'autoriste le port 80-83 en entrée
+  ansible.builtin.iptables:
+    chain: INPUT
+    protocol: tcp
+    destination_port: 80:83
+    jump: ACCEPT
+
+- name: supprime les port en entrée  
+  ansible.builtin.iptables:
+    chain: INPUT
+    policy: DROP

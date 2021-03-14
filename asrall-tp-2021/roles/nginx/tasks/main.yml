@@ -1,0 +1,43 @@
+- name : nginx install
+  apt:
+   name: nginx
+
+#TODO : livrer lb.j2 dans /etc/nginx/sites-available/
+- name: installation des fichiers de conf
+  template:
+    src: lb.j2
+    dest: "/etc/nginx/sites-available/loadbalancer.conf"
+
+#TODO: creer un lien symbolique /etc/nginx/sites-available/loadbalancer.conf vers /etc/nginx/sites-enabled/loadbalancer.conf
+- name: create symlink
+  file:
+    src: /etc/nginx/sites-available/loadbalancer.conf
+    dest: /etc/nginx/sites-enabled/loadbalancer.conf
+    state: link
+  notify: restart nginx
+
+- name: j'autoriste le port 22 (SSH) en entrée
+  ansible.builtin.iptables:
+    chain: INPUT
+    protocol: tcp
+    destination_port: 22
+    jump: ACCEPT
+
+- name: j'autoriste le port 9000 en entrée
+  ansible.builtin.iptables:
+    chain: INPUT
+    protocol: tcp
+    destination_port: 9000
+    jump: ACCEPT
+
+- name: j'autoriste le port 80-83
+  ansible.builtin.iptables:
+    chain: INPUT
+    protocol: tcp
+    destination_port: 80:83
+    jump: ACCEPT
+
+- name: supprime les port en entrée  
+  ansible.builtin.iptables:
+    chain: INPUT
+    policy: DROP
